@@ -5,8 +5,13 @@ import java.util.List;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
@@ -59,10 +64,25 @@ public class ChooseAreaActivity extends Activity {
 	* 当前选中的级别
 	*/
 	private int currentLevel;
+	private boolean isFromWeatherActivity;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		isFromWeatherActivity = getIntent().getBooleanExtra("from_weather_activity", false);
+		/*
+		 * 获取cityname并跳转到WeatherActivity
+		 * */
+		
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		if (prefs.getBoolean("city_selected", false)&&!isFromWeatherActivity) {
+			Intent intent = new Intent(this, WeatherActivity.class);
+			startActivity(intent);
+			finish();
+			return;
+			}
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		setContentView(R.layout.choose_area);
 		listView = (ListView) findViewById(R.id.list_view);
@@ -70,8 +90,10 @@ public class ChooseAreaActivity extends Activity {
 		adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, dataList);
 		listView.setAdapter(adapter);
 		coolWeatherDB = CoolWeatherDB.getInstance(this);
+	
+		
 		listView.setOnItemClickListener(new OnItemClickListener(){
-
+		
 			@Override
 			public void onItemClick(AdapterView<?> arg0, View view, int index,
 					long arg3) {
@@ -84,6 +106,13 @@ public class ChooseAreaActivity extends Activity {
 					selectedCity = cityList.get(index);
 				
 					queryCounties();
+				}else if (currentLevel == LEVEL_COUNTY){
+					String cityname = countyList.get(index).getCountyName();
+					Intent intent = new Intent(ChooseAreaActivity.this,WeatherActivity.class);
+					intent.putExtra("city_name",cityname);
+					Log.d("city", cityname);
+					startActivity(intent); 
+					finish();
 				}
 			}
 		});
@@ -153,10 +182,11 @@ public class ChooseAreaActivity extends Activity {
 		} 
 		showProgressDialog();
 		HttpUtil.sendHttpRequest(address, new HttpCallbackListener(){
-
+		
 			@Override
 			public void onFinish(String response) {
 				// TODO Auto-generated method stub
+				
 				boolean result = false;
 				if("province".equals(type)){
 					result = Utility.handleProvincesResponse(coolWeatherDB,response);
